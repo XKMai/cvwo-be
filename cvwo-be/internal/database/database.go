@@ -18,6 +18,6 @@ func SetupDatabase() *gorm.DB {
 		log.Fatalf("Failed to connect to the database: %v", err)
 	}
 	fmt.Println("Database connection established!")	
-	db.AutoMigrate(&models.User{})
+	db.AutoMigrate(&models.User{},&models.Post{},&models.Comment{})
 	return db
 }

@@ -24,6 +24,8 @@ func Setup(DB *gorm.DB) chi.Router {
 	apiRouter := chi.NewRouter()
 	apiRouter.Mount("/users", routes.UserRoutes())
 	apiRouter.Mount("/healthcheck", routes.HealthCheckRoute())
+	apiRouter.Mount("/posts",routes.PostRoutes())
+	apiRouter.Mount("/comments",routes.CommentRoutes())
 
 	r.Mount("/api", apiRouter)
 	return r

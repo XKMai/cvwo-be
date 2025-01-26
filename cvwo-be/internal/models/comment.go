@@ -4,12 +4,11 @@ import (
 	"gorm.io/gorm"
 )
 
+
 type Comment struct {
-	gorm.Model
-	Content  string `json:"content"`
-	UserId string  `json:"owner_id"`
-	User    User   `json:"owner"`
-	Post	Post   `json:"post"`
-	Datetime string `json:"date_time"`
-	Score    uint   `json:"score"`
+    gorm.Model
+    Content string `json:"content"`
+    UserID  uint   `json:"user_id"` // Matches User model's primary key
+    User    User   `json:"user" gorm:"foreignKey:UserID"`
+    PostID  uint   `json:"post_id"` // Foreign key for Post
 }

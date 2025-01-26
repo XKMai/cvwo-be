@@ -63,6 +63,11 @@ func CreateRefreshToken(userID uint) (string, error) {
 	return tokenString, nil
 }
 
+// Define a custom type for context keys
+type contextKey string
+
+const claimsKey contextKey = "claims"
+
 // Middleware to check if the JWT token is valid
 func IsAuthorized(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -83,7 +88,7 @@ func IsAuthorized(next http.HandlerFunc) http.HandlerFunc {
 		}
 
 		// Attach claims to context if you need to use it later
-		r = r.WithContext(context.WithValue(r.Context(), "claims", claims))
+		r = r.WithContext(context.WithValue(r.Context(), claimsKey, claims))
 
 		next(w, r)
 	}

@@ -13,11 +13,15 @@ func main() {
 	fmt.Println("Preparing server for connection...")
 	db := database.SetupDatabase()
 	r := router.Setup(db)
+	fmt.Println("Hehe")
 	env := os.Getenv("ENV")
 	if env == "DEV" {
+		fmt.Println("Localhost hosted on port 3000")
 		http.ListenAndServe(":3000", r)
 		return
 	} else if env == "PROD" {
-		http.ListenAndServeTLS(":3000", "cert.pem", "key.pem", r)
+		fmt.Println("Production server hosted on port 3000")
+		http.ListenAndServeTLS(":443", "cert.pem", "key.pem", r)
+		return
 	}
 }

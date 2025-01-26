@@ -2,9 +2,11 @@ package comments
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"strconv"
 
+	"github.com/XKMai/CVWO-React/CVWO-Backend/internal/contextkeys"
 	"github.com/XKMai/CVWO-React/CVWO-Backend/internal/models"
 	"github.com/go-chi/chi/v5"
 	"gorm.io/gorm"
@@ -20,14 +22,19 @@ type CommentHandler struct {}
 func Paginate(r *http.Request) func(db *gorm.DB) *gorm.DB {
     return func(db *gorm.DB) *gorm.DB {
 
-		type Input struct{
-			Page int
-			PostID int `json:"post_id"`
-		}
-		var input Input
-		json.NewDecoder(r.Body).Decode(&input)
+        postIDStr := r.URL.Query().Get("post_id")
+        pageStr   := r.URL.Query().Get("page")
 
-		var page = input.Page
+		postID, err := strconv.Atoi(postIDStr)
+        if err != nil {
+            postID = 0
+        }
+
+        page, err := strconv.Atoi(pageStr)
+        if err != nil || page <= 0 {
+            page = 1
+        }
+
         // Default values if not provided
         if page <= 0 {
             page = 1
@@ -38,7 +45,7 @@ func Paginate(r *http.Request) func(db *gorm.DB) *gorm.DB {
 
         // Query for pagination
         return db.
-            Where("post_id = ?", input.PostID).   // Filter comments by PostID
+            Where("post_id = ?", postID).   // Filter comments by PostID
             Order("created_at ASC").        // Oldest to newest
             Offset(offset).                 // Apply the offset
             Limit(pageSize).                // Limit results to the page size
@@ -49,7 +56,12 @@ func Paginate(r *http.Request) func(db *gorm.DB) *gorm.DB {
 }
 
 func (b *CommentHandler) ListComments(w http.ResponseWriter, r *http.Request) {
-	db := r.Context().Value("db").(*gorm.DB)
+	db, ok := r.Context().Value(contextkeys.DBContextKey).(*gorm.DB)
+	if !ok || db == nil {
+		fmt.Println("DB is nil or not properly set in context")
+		http.Error(w, "Database connection is not available", http.StatusInternalServerError)
+		return
+	}
 
 	var comments []models.Comment
 	if err := db.Scopes(Paginate(r)).Find(&comments).Error; err != nil {
@@ -64,7 +76,12 @@ func (b *CommentHandler) ListComments(w http.ResponseWriter, r *http.Request) {
 }
 
 func (b *CommentHandler) GetComment(w http.ResponseWriter, r *http.Request) {
-	db := r.Context().Value("db").(*gorm.DB)
+	db, ok := r.Context().Value(contextkeys.DBContextKey).(*gorm.DB)
+	if !ok || db == nil {
+		fmt.Println("DB is nil or not properly set in context")
+		http.Error(w, "Database connection is not available", http.StatusInternalServerError)
+		return
+	}
 	id_str := chi.URLParam(r, "ID")
 	id,err := strconv.ParseUint(id_str,10,64)
 
@@ -85,7 +102,12 @@ func (b *CommentHandler) GetComment(w http.ResponseWriter, r *http.Request) {
 }
 
 func (b *CommentHandler) CreateComment(w http.ResponseWriter, r *http.Request) {
-	db := r.Context().Value("db").(*gorm.DB)
+	db, ok := r.Context().Value(contextkeys.DBContextKey).(*gorm.DB)
+	if !ok || db == nil {
+		fmt.Println("DB is nil or not properly set in context")
+		http.Error(w, "Database connection is not available", http.StatusInternalServerError)
+		return
+	}
 
 	// Define the input structure
 	type Input struct {
@@ -139,7 +161,12 @@ func (b *CommentHandler) CreateComment(w http.ResponseWriter, r *http.Request) {
 }
 
 func (b *CommentHandler) UpdateComment(w http.ResponseWriter, r *http.Request) {
-	db := r.Context().Value("db").(*gorm.DB)
+	db, ok := r.Context().Value(contextkeys.DBContextKey).(*gorm.DB)
+	if !ok || db == nil {
+		fmt.Println("DB is nil or not properly set in context")
+		http.Error(w, "Database connection is not available", http.StatusInternalServerError)
+		return
+	}
 	//Get ID from url param
 	id_str := chi.URLParam(r, "ID")
 	id,err := strconv.ParseUint(id_str,10,64)
@@ -173,7 +200,12 @@ func (b *CommentHandler) UpdateComment(w http.ResponseWriter, r *http.Request) {
 }
 
 func (b *CommentHandler) DeleteComment(w http.ResponseWriter, r *http.Request) {
-	db := r.Context().Value("db").(*gorm.DB)
+	db, ok := r.Context().Value(contextkeys.DBContextKey).(*gorm.DB)
+	if !ok || db == nil {
+		fmt.Println("DB is nil or not properly set in context")
+		http.Error(w, "Database connection is not available", http.StatusInternalServerError)
+		return
+	}
 	id_str := chi.URLParam(r, "ID")
 	id,err := strconv.ParseUint(id_str,10,64)
 

@@ -4,10 +4,12 @@ import (
 	//"encoding/json"
 
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
 
+	"github.com/XKMai/CVWO-React/CVWO-Backend/internal/contextkeys"
 	"github.com/XKMai/CVWO-React/CVWO-Backend/internal/models"
 	"github.com/XKMai/CVWO-React/CVWO-Backend/internal/utils"
 	"github.com/go-chi/chi/v5"
@@ -17,10 +19,13 @@ import (
 type UserHandler struct {
 }
 
-
-
 func (b *UserHandler) ListUsers(w http.ResponseWriter, r *http.Request) {
-	db := r.Context().Value("db").(*gorm.DB)
+	db, ok := r.Context().Value(contextkeys.DBContextKey).(*gorm.DB)
+	if !ok || db == nil {
+		fmt.Println("DB is nil or not properly set in context")
+		http.Error(w, "Database connection is not available", http.StatusInternalServerError)
+		return
+	}
 
 	var users []models.User
 	if err := db.Omit("password").Find(&users).Error; err != nil {
@@ -35,7 +40,12 @@ func (b *UserHandler) ListUsers(w http.ResponseWriter, r *http.Request) {
 }
 
 func (b *UserHandler) GetUser(w http.ResponseWriter, r *http.Request) {
-	db := r.Context().Value("db").(*gorm.DB)
+	db, ok := r.Context().Value(contextkeys.DBContextKey).(*gorm.DB)
+	if !ok || db == nil {
+		fmt.Println("DB is nil or not properly set in context")
+		http.Error(w, "Database connection is not available", http.StatusInternalServerError)
+		return
+	}
 	id_str := chi.URLParam(r, "ID")
 	id,err := strconv.ParseUint(id_str,10,64)
 
@@ -55,7 +65,12 @@ func (b *UserHandler) GetUser(w http.ResponseWriter, r *http.Request) {
 }
 
 func (b *UserHandler) CreateUser(w http.ResponseWriter, r *http.Request) {
-	db := r.Context().Value("db").(*gorm.DB)
+	db, ok := r.Context().Value(contextkeys.DBContextKey).(*gorm.DB)
+	if !ok || db == nil {
+		fmt.Println("DB is nil or not properly set in context")
+		http.Error(w, "Database connection is not available", http.StatusInternalServerError)
+		return
+	}
 
 	// Define the input structure
 	type Input struct {
@@ -102,7 +117,12 @@ func (b *UserHandler) CreateUser(w http.ResponseWriter, r *http.Request) {
 
 //Only allow updating Description of User
 func (b *UserHandler) UpdateUser(w http.ResponseWriter, r *http.Request) {
-	db := r.Context().Value("db").(*gorm.DB)
+	db, ok := r.Context().Value(contextkeys.DBContextKey).(*gorm.DB)
+	if !ok || db == nil {
+		fmt.Println("DB is nil or not properly set in context")
+		http.Error(w, "Database connection is not available", http.StatusInternalServerError)
+		return
+	}
 	//Get ID from url param
 	id_str := chi.URLParam(r, "ID")
 	id,err := strconv.ParseUint(id_str,10,64)
@@ -141,7 +161,12 @@ func (b *UserHandler) UpdateUser(w http.ResponseWriter, r *http.Request) {
 }
 
 func (b *UserHandler) DeleteUser(w http.ResponseWriter, r *http.Request) {
-	db := r.Context().Value("db").(*gorm.DB)
+	db, ok := r.Context().Value(contextkeys.DBContextKey).(*gorm.DB)
+	if !ok || db == nil {
+		fmt.Println("DB is nil or not properly set in context")
+		http.Error(w, "Database connection is not available", http.StatusInternalServerError)
+		return
+	}
 	id_str := chi.URLParam(r, "ID")
 	id,err := strconv.ParseUint(id_str,10,64)
 
@@ -168,7 +193,12 @@ func (b *UserHandler) DeleteUser(w http.ResponseWriter, r *http.Request) {
 
 // LoginUser - Create JWT token on user login
 func (b *UserHandler) LoginUser(w http.ResponseWriter, r *http.Request) {
-	db := r.Context().Value("db").(*gorm.DB)
+	db, ok := r.Context().Value(contextkeys.DBContextKey).(*gorm.DB)
+	if !ok || db == nil {
+		fmt.Println("DB is nil or not properly set in context")
+		http.Error(w, "Database connection is not available", http.StatusInternalServerError)
+		return
+	}
 
 	type LoginInput struct {
 		Name     string `json:"name"`
@@ -178,13 +208,14 @@ func (b *UserHandler) LoginUser(w http.ResponseWriter, r *http.Request) {
 	var input LoginInput
 	// Decode the JSON body
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
-		http.Error(w, "Invalid input", http.StatusBadRequest)
+		http.Error(w, "Invalid JSON input", http.StatusBadRequest)
+		fmt.Println("Error decoding JSON:", err)
 		return
 	}
 
 	// Find user by name
 	var user models.User
-	if err := db.Where("name = ?", input.Name).First(&user).Error; err != nil {
+	if err := db.Where("name = ?",input.Name).First(&user).Error; err != nil {
 		http.Error(w, "User not found", http.StatusNotFound)
 		return
 	}
@@ -213,9 +244,11 @@ func (b *UserHandler) LoginUser(w http.ResponseWriter, r *http.Request) {
 	res := struct {
 		AccessToken  string `json:"access_token"`
 		RefreshToken string `json:"refresh_token"`
+		UserID int `json:"user_id"`
 	}{
 		AccessToken:  accessToken,
 		RefreshToken: refreshToken,
+		UserID: int(user.ID),
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -224,12 +257,17 @@ func (b *UserHandler) LoginUser(w http.ResponseWriter, r *http.Request) {
 }
 
 func (b *UserHandler) RefreshToken(w http.ResponseWriter, r *http.Request) {
-	db := r.Context().Value("db").(*gorm.DB)
+	db, ok := r.Context().Value(contextkeys.DBContextKey).(*gorm.DB)
+	if !ok || db == nil {
+		fmt.Println("DB is nil or not properly set in context")
+		http.Error(w, "Database connection is not available", http.StatusInternalServerError)
+		return
+	}
 
 	// Extract the refresh token from the request header
-	tokenString := r.Header.Get("access_token")
+	tokenString := r.Header.Get("Authorization")
 	if tokenString == "" {
-		http.Error(w, "Missing access token", http.StatusUnauthorized)
+		http.Error(w, "Missing Authorization token", http.StatusUnauthorized)
 		return
 	}
 

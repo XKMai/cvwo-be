@@ -9,6 +9,7 @@ import (
 	"github.com/go-chi/chi/v5"
 )
 
+//Public Routes
 func HealthCheckRoute() http.Handler {
 	r := chi.NewRouter()
 
@@ -21,15 +22,23 @@ func HealthCheckRoute() http.Handler {
 	return r
 }
 
+func LoginRoute() chi.Router{
+	r := chi.NewRouter()
+	userhandler := users.UserHandler{}
+	r.Post("/login", userhandler.LoginUser)
+	r.Post("/create", userhandler.CreateUser)
+	return r
+}
+
+//Protected Routes
+
 func UserRoutes() chi.Router {
 	r := chi.NewRouter()
 	userhandler := users.UserHandler{}
 	r.Get("/", userhandler.ListUsers) //Lists all
-	r.Post("/", userhandler.CreateUser)
 	r.Get("/{ID}", userhandler.GetUser)
 	r.Put("/{ID}", userhandler.UpdateUser)
 	r.Delete("/{ID}", userhandler.DeleteUser)
-	r.Post("/login/", userhandler.LoginUser)
 	r.Post("/refresh-token/", userhandler.RefreshToken)
 	return r
 }

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"net/http"
 	"os"
 
@@ -9,6 +10,7 @@ import (
 )
 
 func main() {
+	fmt.Println("Preparing server for connection...")
 	db := database.SetupDatabase()
 	r := router.Setup(db)
 	env := os.Getenv("ENV")
